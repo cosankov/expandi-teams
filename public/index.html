@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expandi → Microsoft Teams Notifications</title>
+  <style>
+    :root {
+      --teams-purple: #6264A7;
+      --teams-dark: #464775;
+      --teams-light: #E8E8F0;
+      --bg: #f5f5f8;
+      --card: #ffffff;
+      --text: #242424;
+      --text-muted: #616161;
+      --border: #e0e0e0;
+      --success: #13a10e;
+      --error: #d13438;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--teams-purple), var(--teams-dark));
+      color: white;
+      padding: 3rem 1rem;
+      text-align: center;
+    }
+
+    .header h1 { font-size: 2rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .header p { opacity: 0.9; max-width: 480px; margin: 0 auto; }
+
+    .container { max-width: 680px; margin: 0 auto; padding: 2rem 1rem; }
+
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--teams-purple);
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .card p { color: var(--text-muted); font-size: 0.95rem; }
+    .card a { color: var(--teams-purple); text-decoration: none; font-weight: 500; }
+    .card a:hover { text-decoration: underline; }
+
+    .input-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+    .input-group input {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.15s;
+    }
+
+    .input-group input:focus { border-color: var(--teams-purple); }
+
+    .btn {
+      padding: 0.7rem 1.5rem;
+      background: var(--teams-purple);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: var(--teams-dark); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--teams-purple);
+      border: 1px solid var(--teams-purple);
+    }
+
+    .btn-outline:hover {
+      background: var(--teams-light);
+    }
+
+    .output-box {
+      margin-top: 1rem;
+      padding: 0.8rem 1rem;
+      background: #f8f8fb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      word-break: break-all;
+      font-size: 0.85rem;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      display: none;
+    }
+
+    .output-box.visible { display: block; }
+
+    .copy-btn {
+      display: none;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.4rem 1rem;
+    }
+
+    .copy-btn.visible { display: inline-block; }
+    .error { color: var(--error); font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+    .error.visible { display: block; }
+
+    /* Teams-style message preview */
+    .teams-preview {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    .teams-message {
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      overflow: hidden;
+    }
+
+    .teams-msg-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem 0;
+    }
+
+    .teams-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--teams-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .teams-sender { font-weight: 600; font-size: 0.85rem; }
+    .teams-time { font-size: 0.75rem; color: var(--text-muted); }
+
+    .teams-card {
+      margin: 0.5rem 1rem 0.75rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .teams-card-accent {
+      height: 3px;
+      background: var(--teams-purple);
+    }
+
+    .teams-card-body {
+      padding: 0.75rem;
+    }
+
+    .teams-card-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .teams-card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .teams-card-contact {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      margin-bottom: 0.5rem;
+    }
+
+    .teams-card-photo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      flex-shrink: 0;
+    }
+
+    .teams-card-name { font-weight: 600; font-size: 0.85rem; }
+    .teams-card-role { font-size: 0.8rem; color: var(--text-muted); }
+    .teams-card-company { font-size: 0.8rem; color: var(--text-muted); }
+
+    .teams-card-quote {
+      background: #f5f5f5;
+      border-left: 3px solid var(--teams-purple);
+      padding: 0.4rem 0.6rem;
+      font-size: 0.8rem;
+      margin: 0.5rem 0;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .teams-card-quote-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.15rem;
+    }
+
+    .teams-card-stats {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .teams-card-links {
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+
+    .teams-card-links a {
+      color: var(--teams-purple);
+      text-decoration: none;
+      margin-right: 0.75rem;
+    }
+
+    /* Step 4 test */
+    .step-4 { display: none; }
+    .step-4.visible { display: block; }
+
+    .test-result {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    .test-result.visible { display: block; }
+    .test-success { background: #dff6dd; color: #107c10; border: 1px solid #a7e3a5; }
+    .test-error { background: #fde7e9; color: #d13438; border: 1px solid #f1bbbc; }
+    .test-loading { background: var(--teams-light); color: var(--teams-purple); border: 1px solid #c8c8db; }
+
+    .faq { margin-top: 2rem; }
+    .faq h2 { font-size: 1.2rem; margin-bottom: 1rem; }
+    .faq details { margin-bottom: 0.75rem; }
+    .faq summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    .faq details p { margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-muted); }
+
+    @media (max-width: 600px) {
+      .input-group { flex-direction: column; }
+      .header h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Expandi &rarr; Microsoft Teams</h1>
+  <p>Get real-time Expandi notifications in your Teams channel. Set up in under 2 minutes.</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="step-title"><span class="step-number">1</span> Create a Teams Incoming Webhook</div>
+    <p>
+      In Microsoft Teams, go to the channel where you want notifications.<br><br>
+      Click the <strong>&bull;&bull;&bull;</strong> menu next to the channel name &rarr; <strong>Connectors</strong> (or <strong>Manage channel</strong> &rarr; <strong>Connectors</strong>).<br><br>
+      Find <strong>Incoming Webhook</strong> and click <strong>Configure</strong>.<br><br>
+      Give it a name (e.g., "Expandi Notifications"), optionally upload an icon, then click <strong>Create</strong>.<br><br>
+      Copy the <strong>Webhook URL</strong> that appears.
+    </p>
+    <p style="margin-top: 0.75rem; font-size: 0.85rem;">
+      <strong>Using the new Workflows app?</strong> Create a workflow with the "When a Teams webhook request is received" trigger. The generated URL (ending in <code>.logic.azure.com</code>) works too.
+    </p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="step-title"><span class="step-number">2</span> Generate your Expandi endpoint</div>
+    <p>Paste your Teams webhook URL below to generate a unique Expandi endpoint.</p>
+    <div class="input-group">
+      <input type="text" id="teamsUrl" placeholder="https://xxx.webhook.office.com/..." />
+      <button class="btn" onclick="generate()">Generate</button>
+    </div>
+    <div class="error" id="urlError"></div>
+    <div class="output-box" id="output"></div>
+    <button class="btn btn-outline copy-btn" id="copyBtn" onclick="copyUrl()">Copy URL</button>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="step-title"><span class="step-number">3</span> Add the endpoint to Expandi</div>
+    <p>
+      In Expandi, go to <strong>LinkedIn Account &rarr; Settings &rarr; Webhooks</strong>.<br><br>
+      Click <strong>Add a webhook</strong>, paste the generated URL, and select the event you want (e.g., <em>Contact replied to campaign message</em>).<br><br>
+      Save and you're done! Notifications will appear in your Teams channel.
+    </p>
+  </div>
+
+  <!-- Step 4: Test -->
+  <div class="card step-4" id="step4">
+    <div class="step-title"><span class="step-number">4</span> Send a test notification</div>
+    <p>Verify everything works by sending a sample notification to your Teams channel.</p>
+    <button class="btn" id="testBtn" onclick="sendTest()" style="margin-top: 0.75rem;">Send Test Notification</button>
+    <div class="test-result" id="testResult"></div>
+  </div>
+
+  <!-- Preview -->
+  <div class="card">
+    <div class="step-title">Message preview</div>
+    <p style="margin-bottom: 0.75rem;">Here's how a reply notification looks in Teams:</p>
+
+    <div class="teams-preview">
+      <div class="teams-message">
+        <div class="teams-msg-header">
+          <div class="teams-avatar">E</div>
+          <div>
+            <span class="teams-sender">Expandi Notifications</span>
+            <span class="teams-time">&nbsp;&middot;&nbsp;Just now</span>
+          </div>
+        </div>
+        <div class="teams-card">
+          <div class="teams-card-accent"></div>
+          <div class="teams-card-body">
+            <div class="teams-card-title">&#x1F4AC; New Reply</div>
+            <div class="teams-card-subtitle">Campaign: ABM | Email vs LinkedIn Research &middot; Sender: Ilija Cosic</div>
+            <div class="teams-card-contact">
+              <div class="teams-card-photo"></div>
+              <div>
+                <div class="teams-card-name">Sarah Chen</div>
+                <div class="teams-card-role">VP of Sales at TechCorp</div>
+                <div class="teams-card-company">TechCorp &middot; 201-500 employees &middot; San Francisco, US</div>
+              </div>
+            </div>
+            <div class="teams-card-quote-label">&#x1F4AC; Their reply:</div>
+            <div class="teams-card-quote">Hey! Interesting question &mdash; we've actually been doing a lot more LinkedIn lately since email open rates have been trending down for us.</div>
+            <div class="teams-card-quote-label" style="margin-top: 0.5rem;">&#x1F4E4; You sent:</div>
+            <div class="teams-card-quote">doing a bit of research on the side trying to figure out whether outbound teams are getting better responses from email or LinkedIn these days.</div>
+            <div class="teams-card-stats">Steps before reply: <strong>3</strong> &middot; Connected: <strong>Mar 15</strong> &middot; Replied: <strong>Mar 17</strong></div>
+            <div class="teams-card-links">
+              <a href="#">&#x1F517; LinkedIn</a>
+              <a href="#">&#x1F4E5; Expandi Inbox</a>
+              <a href="#">&#x1F50E; Sales Nav</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h2>FAQ</h2>
+
+    <details>
+      <summary>Which events are supported?</summary>
+      <p>All 27 Expandi webhook events: replies, connections, messages sent, profile visits, email events, and more. Each event type has its own formatted card.</p>
+    </details>
+
+    <details>
+      <summary>Is my webhook URL stored anywhere?</summary>
+      <p>No. Your Teams webhook URL is encoded directly into the endpoint path using Base64url. There is no database &mdash; the URL is decoded on every request. Fully stateless.</p>
+    </details>
+
+    <details>
+      <summary>Can I use the new Workflows webhook instead of Connectors?</summary>
+      <p>Yes! Microsoft is transitioning from Office 365 Connectors to the Workflows app. If your webhook URL ends in <code>.logic.azure.com</code>, it will work the same way. Both URL formats are supported.</p>
+    </details>
+
+    <details>
+      <summary>Can I set up multiple channels?</summary>
+      <p>Yes. Create a separate webhook for each channel, generate a separate endpoint for each, and add each to Expandi for different events (or the same event to multiple channels).</p>
+    </details>
+
+    <details>
+      <summary>The test says "target URL could not be reached"</summary>
+      <p>Make sure you copied the <em>full</em> generated endpoint URL. It's long because your Teams webhook URL is encoded in the path. Also ensure your Teams webhook is still active and hasn't been deleted.</p>
+    </details>
+
+    <details>
+      <summary>I'm not receiving notifications</summary>
+      <p>1. Send a test using the button above to verify the endpoint works.<br>
+         2. In Expandi, check that the webhook is enabled and the event type matches your campaign actions.<br>
+         3. Webhooks only fire for new events &mdash; they don't backfill historical data.</p>
+    </details>
+  </div>
+
+</div>
+
+<script>
+const ORIGIN = window.location.origin;
+
+const TEST_PAYLOAD = {
+  hook: {
+    id: 99999,
+    name: "Teams Test",
+    event: "linked_in_messenger.campaign_replied",
+    li_account: 100000,
+    fired_datetime: new Date().toISOString(),
+    li_account_name: "Test User"
+  },
+  contact: {
+    id: 1,
+    first_name: "Sarah",
+    last_name: "Chen",
+    job_title: "VP of Sales at TechCorp",
+    company: {
+      name: "TechCorp",
+      website: "https://techcorp.example.com",
+      location: "San Francisco, US",
+      employee_count_start: 201,
+      employee_count_end: 500
+    },
+    image_link: "https://i.pravatar.cc/100?u=sarah-chen",
+    profile_link: "https://www.linkedin.com/in/sarah-chen-example/",
+    sales_nav_link: "https://www.linkedin.com/sales/lead/example",
+    company_name: "TechCorp"
+  },
+  messenger: {
+    id: 1,
+    campaign_instance: "ABM | Email vs LinkedIn Research",
+    last_received_message: "Hey! Interesting question \u2014 we've actually been doing a lot more LinkedIn lately since email open rates have been trending down for us.",
+    last_sent_message: "doing a bit of research on the side trying to figure out whether outbound teams are getting better responses from email or LinkedIn these days. which is working better for you guys right now?",
+    lead_inbox_link: "https://app.expandi.io/inbox?search=Sarah%20Chen",
+    thread: "https://www.linkedin.com/messaging/thread/example/",
+    connected_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    last_received_message_datetime: new Date().toISOString(),
+    conversation_status: "Replied"
+  },
+  campaign_instance_contact: {
+    id: 1,
+    nr_steps_before_responding: 3,
+    first_reply_datetime: new Date().toISOString()
+  }
+};
+
+let generatedEndpoint = '';
+
+function generate() {
+  const raw = document.getElementById('teamsUrl').value.trim();
+  const errorEl = document.getElementById('urlError');
+  const outputEl = document.getElementById('output');
+  const copyBtn = document.getElementById('copyBtn');
+  const step4 = document.getElementById('step4');
+
+  errorEl.classList.remove('visible');
+  outputEl.classList.remove('visible');
+  copyBtn.classList.remove('visible');
+  step4.classList.remove('visible');
+
+  if (!raw) {
+    errorEl.textContent = 'Please paste your Teams webhook URL.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  const isLegacy = raw.includes('.webhook.office.com/');
+  const isWorkflow = raw.includes('.logic.azure.com/');
+  if (!isLegacy && !isWorkflow) {
+    errorEl.textContent = 'That doesn\u2019t look like a Teams webhook URL. It should contain .webhook.office.com or .logic.azure.com.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  // Base64url encode
+  const bytes = new TextEncoder().encode(raw);
+  let b64 = btoa(String.fromCharCode(...bytes));
+  b64 = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  generatedEndpoint = ORIGIN + '/api/hook/' + b64;
+  outputEl.textContent = generatedEndpoint;
+  outputEl.classList.add('visible');
+  copyBtn.classList.add('visible');
+  step4.classList.add('visible');
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(generatedEndpoint).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy URL'; }, 2000);
+  });
+}
+
+async function sendTest() {
+  if (!generatedEndpoint) return;
+
+  const btn = document.getElementById('testBtn');
+  const result = document.getElementById('testResult');
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  result.className = 'test-result visible test-loading';
+  result.textContent = 'Sending test notification to Teams...';
+
+  try {
+    const res = await fetch(generatedEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(TEST_PAYLOAD),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.ok) {
+      result.className = 'test-result visible test-success';
+      result.textContent = 'Test notification sent! Check your Teams channel.';
+    } else {
+      result.className = 'test-result visible test-error';
+      result.textContent = 'Failed: ' + (data.error || data.detail || `HTTP ${res.status}`);
+    }
+  } catch (err) {
+    result.className = 'test-result visible test-error';
+    result.textContent = 'Network error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Test Notification';
+  }
+}
+</script>
+
+</body>
+</html>

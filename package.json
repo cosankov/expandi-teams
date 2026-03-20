@@ -1,0 +1,9 @@
+{
+  "name": "expandi-teams",
+  "version": "1.0.0",
+  "description": "Expandi webhook → Microsoft Teams notification relay",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
